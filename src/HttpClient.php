@@ -228,24 +228,33 @@ final class HttpClient
             if (!in_array($key, $allowedOptions)) {
                 throw new LogicException('Invalid option: ' . $key);
             }
-            if ($key === 'headers' && !is_array($value)) {
-                throw new LogicException('Headers must be an array of key-value pairs');
-            }
 
-            if ($key === 'user_agent' && !is_string($value)) {
-                throw new LogicException('User agent must be a string');
-            }
-
-            if ($key === 'timeout' && !is_int($value)) {
-                throw new LogicException('Timeout must be a float');
-            }
-
-            if ($key === 'method' && (!is_string($value) || !in_array($value, ['GET', 'POST', 'PUT', 'DELETE', 'HEAD']))) {
-                throw new LogicException('Method must be GET, POST, PUT, DELETE or HEAD');
-            }
-
-            if ($key === 'base_url' && !empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
-                throw new LogicException('Base URL must be a valid URL');
+            switch ($key) {
+                case 'headers':
+                    if (!is_array($value)) {
+                        throw new LogicException('Headers must be an array of key-value pairs');
+                    }
+                    break;
+                case 'user_agent':
+                    if (!is_string($value)) {
+                        throw new LogicException('User agent must be a string');
+                    }
+                    break;
+                case 'timeout':
+                    if (!is_int($value)) {
+                        throw new LogicException('Timeout must be an integer');
+                    }
+                    break;
+                case 'method':
+                    if (!is_string($value) || !in_array($value, ['GET', 'POST', 'PUT', 'DELETE', 'HEAD'])) {
+                        throw new LogicException('Method must be GET, POST, PUT, DELETE, or HEAD');
+                    }
+                    break;
+                case 'base_url':
+                    if (!empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
+                        throw new LogicException('Base URL must be a valid URL');
+                    }
+                    break;
             }
         }
     }
