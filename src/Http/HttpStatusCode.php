@@ -1,6 +1,6 @@
 <?php
 
-namespace PhpDevCommunity\HttpClient;
+namespace PhpDevCommunity\HttpClient\Http;
 
 use SplEnum;
 

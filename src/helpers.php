@@ -11,9 +11,9 @@ if (!function_exists('http_client')) {
      * @param array $options The options to configure the HttpClient
      * @return HttpClient The newly created HttpClient instance
      */
-    function http_client(array $options = []): HttpClient
+    function http_client(array $options = [], callable $logger = null): HttpClient
     {
-        return new HttpClient($options);
+        return new HttpClient($options, $logger);
     }
 }
 
@@ -28,7 +28,7 @@ if (!function_exists('http_post')) {
      */
     function http_post(string $url, array $data = [], array $headers = []): Response
     {
-        return http_client()->post($url, $data, false,$headers);
+        return http_client()->post($url, $data, false, $headers);
     }
 }
 
@@ -43,7 +43,7 @@ if (!function_exists('http_post_json')) {
      */
     function http_post_json(string $url, array $data = [], array $headers = []): Response
     {
-        return http_client()->post($url, $data, true ,$headers);
+        return http_client()->post($url, $data, true, $headers);
     }
 }
 

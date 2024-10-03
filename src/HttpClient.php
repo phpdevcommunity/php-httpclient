@@ -4,6 +4,7 @@ namespace PhpDevCommunity\HttpClient;
 
 use InvalidArgumentException;
 use LogicException;
+use PhpDevCommunity\HttpClient\Http\HttpStatusCode;
 use PhpDevCommunity\HttpClient\Http\Response;
 
 final class HttpClient
@@ -21,6 +22,8 @@ final class HttpClient
      */
     private array $options;
 
+    private $logger;
+
     /**
      * HttpClient constructor.
      *
@@ -31,7 +34,7 @@ final class HttpClient
      *                      - array headers An associative array of HTTP headers to include in the request.
      *                      - string base_url The base URL to prepend to relative URLs in the request.
      */
-    public function __construct(array $options = [])
+    public function __construct(array $options = [], ?callable $logger = null)
     {
         self::validateOptions($options, ['user_agent', 'timeout', 'headers', 'base_url']);
         $this->options = array_replace([
@@ -40,6 +43,7 @@ final class HttpClient
             'headers' => [],
             'base_url' => null,
         ], $options);
+        $this->logger = $logger;
     }
 
     /**
@@ -95,6 +99,8 @@ final class HttpClient
      */
     public function fetch(string $url, array $options = []): Response
     {
+        $options['method'] = strtoupper($options['method'] ?? 'GET');
+        $options['body'] = $options['body'] ?? '';
         self::validateOptions($options, ['user_agent', 'timeout', 'headers', 'body', 'method']);
 
         $options = array_merge_recursive($this->options, $options);
@@ -110,12 +116,28 @@ final class HttpClient
             throw new InvalidArgumentException(sprintf('Invalid URL: %s', $url));
         }
 
+        $info = [
+            'url' => $url,
+            'request' => [
+                'user_agent' => $options['user_agent'],
+                'method' => $options['method'],
+                'headers' => $options['headers'],
+                'body' => $options['body'],
+            ],
+            'response' => [
+                'body' => '',
+                'headers' => [],
+            ]
+        ];
+
         $response = '';
         $fp = fopen($url, 'rb', false, $context);
         $httpResponseHeaders = $http_response_header;
+        $headers = self::parseHttpResponseHeaders($httpResponseHeaders);
+        $info['response']['headers'] = $headers;
         if ($fp === false) {
-            $detail = $httpResponseHeaders[0] ?? '';
-            throw new LogicException(sprintf('Error opening request to %s: %s', $url, $detail));
+            $this->log($info);
+            throw new LogicException(sprintf('Error opening request to %s: %s', $url, $httpResponseHeaders[0] ?? ''));
         }
 
         while (!feof($fp)) {
@@ -124,9 +146,10 @@ final class HttpClient
 
         fclose($fp);
 
-        $headers = self::parseHttpResponseHeaders($httpResponseHeaders);
+        $info['response']['body'] = $response;
+        $this->log($info);
 
-        return new Response($response, $headers['status_code'] ?? HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED, $headers);
+        return new Response($response, $headers['status_code'], $headers);
     }
 
     /**
@@ -137,16 +160,14 @@ final class HttpClient
      */
     private function createContext(array $options)
     {
-        $method = strtoupper($options['method'] ?? 'GET');
-        $body = $options['body'] ?? '';
-
-        if (in_array($method, ['POST', 'PUT']) && is_array($body)) {
+        $body = $options['body'];
+        if (in_array($options['method'], ['POST', 'PUT']) && is_array($body)) {
             $body = self::prepareRequestBody($body, $options['headers']);
         }
 
         $opts = [
             'http' => [
-                'method' => $method,
+                'method' => $options['method'],
                 'header' => self::formatHttpRequestHeaders($options['headers']),
                 'content' => $body,
                 'user_agent' => $options['user_agent'],
@@ -156,6 +177,14 @@ final class HttpClient
         ];
 
         return stream_context_create($opts);
+    }
+
+    private function log(array $info): void
+    {
+        $logger = $this->logger;
+        if (is_callable($logger)) {
+            $logger($info);
+        }
     }
 
     /**
@@ -211,6 +240,10 @@ final class HttpClient
                     $headers['status_code'] = $httpCode;
                 }
             }
+        }
+
+        if (!isset($headers['status_code'])) {
+            $headers['status_code'] = HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED;
         }
         return $headers;
     }
