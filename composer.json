@@ -1,0 +1,27 @@
+{
+  "name": "phpdevcommunity/php-httpclient",
+  "description": "A lightweight PHP HTTP client library without external dependencies. No need curl extension.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "F. Michel",
+      "homepage": "https://www.phpdevcommunity.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "PhpDevCommunity\\HttpClient\\": "src",
+      "Test\\PhpDevCommunity\\HttpClient\\": "tests"
+    },
+    "files": [
+      "src/helpers.php"
+    ]
+  },
+  "require": {
+    "php": ">=7.4"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.4"
+  }
+}
